@@ -1016,16 +1016,15 @@ return await stepContext.beginDialog(REINICIO_SAP_DIALOG);
 Crear el archivo **desbloqueoSapDialog.js** en la carpeta **dialogs**.
 
 ```
-const { ChoicePrompt, WaterfallDialog, ChoiceFactory, ListStyle } = require("botbuilder-dialogs");
+const { ComponentDialog, ChoicePrompt, WaterfallDialog, ChoiceFactory, ListStyle } = require("botbuilder-dialogs");
 const { CardFactory } = require("botbuilder");
-const { HelperDialog } = require("./helperDialog");
 const { Cards } = require('../cards/card');
 const { OdataConnection } = require('../odata/odataConnection');
 
 const CHOICE_PROMPT = 'choicePrompt';
 const WATERFALL_DIALOG = 'waterfallDialog';
 
-class DesbloqueoSapDialog extends HelperDialog {
+class DesbloqueoSapDialog extends ComponentDialog {
     constructor(dialogId) {
         super(dialogId);
 
