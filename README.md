@@ -613,6 +613,7 @@ OdataPassword = 'j3ML#BDzc4'
 Modificar el archivo **index.js**, ingresar el código al inicio del archivo.
 
 ```
+const path = require('path');
 const dotenv = require('dotenv');
 // Import required bot configuration.
 const ENV_FILE = path.join(__dirname, '.env');
@@ -750,7 +751,6 @@ const { ComponentDialog, ChoicePrompt, WaterfallDialog, ChoiceFactory, ListStyle
 const { CardFactory } = require("botbuilder");
 const { Cards } = require('../cards/card');
 const { OdataConnection } = require('../odata/odataConnection');
-const { MsteamsConnection } = require('../msteams/msteamsConnection');
 
 const CHOICE_PROMPT = 'choicePrompt';
 const WATERFALL_DIALOG = 'waterfallDialog';
@@ -849,7 +849,52 @@ class ReinicioSapDialog extends ComponentDialog {
 module.exports.ReinicioSapDialog = ReinicioSapDialog;
 ```
 
-Modificar el archivo **card.js**, agregar los métodos **reinicioSap** y **reinicioSapError**.
+Modificar el archivo **card.js**, agregar los métodos **errorMessage**, **reinicioSap** y **reinicioSapError**.
+
+```
+async errorMessage(message){
+        const json = {
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "type": "AdaptiveCard",
+            "version": "1.3",
+            "body": [
+                {
+                    "type": "ColumnSet",
+                    "columns": [
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "Image",
+                                    "size": "Small",
+                                    "url": "https://cdn.icon-icons.com/icons2/586/PNG/512/robot-head-with-cardiogram_icon-icons.com_55279.png"
+                                }
+                            ],
+                            "width": "auto"
+                        },
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": `¡Ooppps!.
+                                    \n**${ message }**`,
+                                    "size": "Default",
+                                    "fontType": "Default",
+                                    "height": "stretch",
+                                    "wrap": true
+                                }
+                            ],
+                            "width": "stretch"
+                        }
+                    ]
+                } 
+            ]
+        };
+        
+        return json;
+    }
+```
 
 ```
 async reinicioSap(user, system, password){
