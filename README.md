@@ -30,6 +30,7 @@ Instalar los módulos npm:
     "base-64": "^1.0.0",
     "botbuilder": "^4.14.1",
     "botbuilder-dialogs": "^4.14.1",
+    "dotenv": "^10.0.0",
     "node-fetch": "^2.6.1",
     "nodemon": "^2.0.12",
     "restify": "^8.5.1",
