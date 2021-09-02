@@ -597,3 +597,369 @@ async run(context, dialogState) {
     }
 }
 ```
+
+## Paso 10:
+
+Crear el archivo **.env** en la carpeta raiz del proyecto e ingresar el código:
+
+```
+OdataHostUrlOCS200 = 'http://omnias4hana01.omniasolution.com:8000/sap/opu/odata/sap/zosgw_user_management_srv'
+OdataUser = 'AACCHIN'
+OdataPassword = 'j3ML#BDzc4'
+```
+
+Modificar el archivo **index.js**, ingresar el código al inicio del archivo.
+
+```
+const dotenv = require('dotenv');
+// Import required bot configuration.
+const ENV_FILE = path.join(__dirname, '.env');
+dotenv.config({ path: ENV_FILE });
+```
+
+Crear la carpeta **odata** dentro de la carpeta **src**.
+
+Crear el archivo **odataConnection.js** dentro de la carpeta **odata** e ingresar el código.
+
+```
+const axios = require('axios');
+
+class OdataConnection {
+    constructor() {
+
+    }
+
+    async getSystemSet() {
+        let url;
+        url = `${ process.env.OdataHostUrlDEV200 }/SystemSet`;
+
+        const resultOdata = await axios.get(url, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            auth: {
+              username: process.env.OdataUser,
+              password: process.env.OdataPassword
+            }
+        }).then((response) => {
+            return response.data.d;
+        })
+        .catch((error) => { 
+            console.log(error);
+            return error;
+        });
+
+        return resultOdata;
+    }
+
+    async resetPassword(SistMandt, Useralias) {
+        let url;
+
+        var jsonError = {
+            'type' : 'E',
+            'message' : 'El sistema y mandante seleccionados no están disponibles.'
+        }
+
+        switch(SistMandt){
+            case 'OCS200':
+                url = `${ process.env.OdataHostUrlDEV200 }/ResetPassword?SistMandt='${ SistMandt }'&Useralias='${ Useralias }'`;
+                break;
+            case 'OCS010':
+                return jsonError;
+        }
+
+        const resultOdata = await axios.get(url, {
+            auth: {
+              username: process.env.OdataUser,
+              password: process.env.OdataPassword
+            }
+        }).then((response) => { 
+            var json = {
+                'type' : response.data.d.Type,
+                'id' : response.data.d.Id,
+                'number' : response.data.d.Number,
+                'message' : response.data.d.MsgTexto,
+                'user' : response.data.d.MsgVar1,
+                'system' : response.data.d.MsgVar2,
+                'password' : response.data.d.MsgVar3,
+            }
+            return json;
+        })
+        .catch((error) => { 
+            console.log(error);
+            return error;
+        });
+
+        return resultOdata;
+    }
+
+    async unlockUser(SistMandt, Useralias) {
+        let url;
+
+        var jsonError = {
+            'type' : 'E',
+            'message' : 'El sistema y mandante seleccionados no están disponibles.'
+        }
+
+        switch(SistMandt){
+            case 'OCS200':
+                url = `${ process.env.OdataHostUrlDEV200 }/UnlockUser?SistMandt='${ SistMandt }'&Useralias='${ Useralias }'`;
+                break;
+            case 'OCS010':
+                return jsonError;
+            case 'PRD400':
+                return jsonError;
+        }
+
+        const resultOdata = await axios.get(url, {
+            auth: {
+              username: process.env.OdataUser,
+              password: process.env.OdataPassword
+            }
+        }).then((response) => { 
+            var json = {
+                'type' : response.data.d.Type,
+                'id' : response.data.d.Id,
+                'number' : response.data.d.Number,
+                'message' : response.data.d.MsgTexto,
+                'user' : response.data.d.MsgVar1,
+                'system' : response.data.d.MsgVar2,
+                'password' : response.data.d.MsgTexto
+            }
+            return json;
+        })
+        .catch((error) => { 
+            console.log(error);
+            return error;
+        });
+
+        return resultOdata;
+    }
+}
+
+module.exports.OdataConnection = OdataConnection
+```
+
+Crear el archivo **reinicioSapDialog.js** en la carpeta **dialogs**.
+
+```
+const { ComponentDialog, ChoicePrompt, WaterfallDialog, ChoiceFactory, ListStyle } = require("botbuilder-dialogs");
+const { CardFactory } = require("botbuilder");
+const { Cards } = require('../cards/card');
+const { OdataConnection } = require('../odata/odataConnection');
+const { MsteamsConnection } = require('../msteams/msteamsConnection');
+
+const CHOICE_PROMPT = 'choicePrompt';
+const WATERFALL_DIALOG = 'waterfallDialog';
+
+class ReinicioSapDialog extends ComponentDialog {
+    constructor(dialogId) {
+        super(dialogId);
+
+        this.addDialog(new ChoicePrompt(CHOICE_PROMPT))
+            .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
+                this.systemChoiceStep.bind(this),
+                this.reinicioStep.bind(this)
+            ])
+        );
+            
+        this.initialDialogId = WATERFALL_DIALOG;
+    }
+
+    async systemChoiceStep(stepContext) {
+        const systemData = stepContext.options;
+ 
+        systemData.Useralias = 'aachin@omniasolution.com';
+
+        let odataConnection = new OdataConnection();
+        let odataResult = await odataConnection.getSystemSet();
+
+        if(odataResult.results){
+            var systemChoices = [];
+            odataResult.results.forEach(function(result, index) {
+                systemChoices.push(result.SistMandt);
+            });
+
+            systemChoices.push('Cancelar');
+
+            return await stepContext.prompt(CHOICE_PROMPT, {
+                choices: ChoiceFactory.toChoices(systemChoices),
+                prompt: 'Seleccionar el sistema y mandante.',
+                style: ListStyle.heroCard
+            });
+        }else{
+            systemData.desbloqueo = false;
+
+            var message = 'No se encontraron sistemas SAP disponibles.'
+            let card = new Cards();
+            await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.errorMessage(message))]});
+
+            console.log('Fin Reinicio SAP Dialog');
+            return await stepContext.endDialog();
+        };     
+/*
+        var systemChoices = [];
+        systemChoices.push('DEV200');
+        systemChoices.push('DEV400');
+        systemChoices.push('QAS400');
+        systemChoices.push('PRD400');
+        systemChoices.push('Cancelar');
+
+        systemData.Useralias = 'aachin@omniasolution.com';
+
+        return await stepContext.prompt(CHOICE_PROMPT, {
+            choices: ChoiceFactory.toChoices(systemChoices),
+            prompt: 'Seleccionar el sistema y mandante para el besbloqueo de usuario SAP.',
+            style: ListStyle.heroCard
+        });   
+        */
+    }
+
+    async reinicioStep(stepContext){
+        const systemData = stepContext.options;
+
+        systemData.option = stepContext.result.value;
+
+        switch(systemData.option) {
+            case 'Cancelar': 
+                return stepContext;
+            default:
+
+            let odataConnection = new OdataConnection();
+            let odataResult = await odataConnection.resetPassword(systemData.option, systemData.Useralias);
+            
+            let card = new Cards();
+            switch(odataResult.type){
+                case 'S':
+                    await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.reinicioSap(odataResult.user, odataResult.system, odataResult.password))]});
+                    break;
+                case 'E':
+                    await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.reinicioSapError(odataResult.message))]});
+                    break;
+            }
+            console.log('Fin Menú Desbloqueo SAP Dialog');
+            return await stepContext.endDialog();
+        }
+    }
+}
+
+module.exports.ReinicioSapDialog = ReinicioSapDialog;
+```
+
+Modificar el archivo **card.js**, agregar los métodos **reinicioSap** y **reinicioSapError**.
+
+```
+async reinicioSap(user, system, password){
+        const json = {
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "type": "AdaptiveCard",
+            "version": "1.3",
+            "body": [
+                {
+                    "type": "ColumnSet",
+                    "columns": [
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "Image",
+                                    "size": "Small",
+                                    "url": "https://cdn.icon-icons.com/icons2/1724/PNG/512/4023883-bot-head-robot-robotics_112865.png"
+                                }
+                            ],
+                            "width": "auto"
+                        },
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": `Se ha reiniciado la contraseña del usuario **${ user }** en el sistema **${ system }**.
+                                    \nLa nueva contraseña es:
+                                    \n**${ password }**`,
+                                    "size": "Default",
+                                    "fontType": "Default",
+                                    "height": "stretch",
+                                    "wrap": true
+                                }
+                            ],
+                            "width": "stretch"
+                        }
+                    ]
+                } 
+            ]
+        };
+        
+        return json;
+    }
+```
+
+```
+async reinicioSapError(message){
+        const json = {
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "type": "AdaptiveCard",
+            "version": "1.3",
+            "body": [
+                {
+                    "type": "ColumnSet",
+                    "columns": [
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "Image",
+                                    "size": "Small",
+                                    "url": "https://cdn.icon-icons.com/icons2/586/PNG/512/robot-head-with-cardiogram_icon-icons.com_55279.png"
+                                }
+                            ],
+                            "width": "auto"
+                        },
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": `Se ha identificado un error en SAP.
+                                    \n**${ message }**`,
+                                    "size": "Default",
+                                    "fontType": "Default",
+                                    "height": "stretch",
+                                    "wrap": true
+                                }
+                            ],
+                            "width": "stretch"
+                        }
+                    ]
+                } 
+            ]
+        };
+        
+        return json;
+    }
+```
+
+Modificar el archivo **menuInicialDialog.js**, agregar la librería al inicio del archivo.
+
+```
+const { ReinicioSapDialog } = require("./reinicioSapDialog");
+```
+
+Crear la constante **REINICIO_SAP_DIALOG**.
+
+```
+const REINICIO_SAP_DIALOG = 'reinicioSapDialog';
+```
+
+Agregar el llamado al diálogo **ReinicioSapDialog**.
+
+```
+ReinicioSapDialog(REINICIO_SAP_DIALOG)
+```
+
+Llamar al diálogo en el método **callOptionStep**.
+
+```
+return await stepContext.beginDialog(REINICIO_SAP_DIALOG);
+```
