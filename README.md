@@ -1010,3 +1010,145 @@ Llamar al diálogo en el método **callOptionStep**.
 ```
 return await stepContext.beginDialog(REINICIO_SAP_DIALOG);
 ```
+
+## Paso 11:
+
+Crear el archivo **desbloqueoSapDialog.js** en la carpeta **dialogs**.
+
+```
+const { ChoicePrompt, WaterfallDialog, ChoiceFactory, ListStyle } = require("botbuilder-dialogs");
+const { CardFactory } = require("botbuilder");
+const { HelperDialog } = require("./helperDialog");
+const { Cards } = require('../cards/card');
+const { OdataConnection } = require('../odata/odataConnection');
+const { MsteamsConnection } = require('../msteams/msteamsConnection');
+
+const CHOICE_PROMPT = 'choicePrompt';
+const WATERFALL_DIALOG = 'waterfallDialog';
+
+class DesbloqueoSapDialog extends HelperDialog {
+    constructor(dialogId) {
+        super(dialogId);
+
+        this.addDialog(new ChoicePrompt(CHOICE_PROMPT))
+            .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
+                this.systemChoiceStep.bind(this),
+                this.desbloqueoStep.bind(this)
+            ])
+        );
+            
+        this.initialDialogId = WATERFALL_DIALOG;
+    }
+
+    async systemChoiceStep(stepContext) {
+        const systemData = stepContext.options;
+
+        let msteamsConnection = new MsteamsConnection();
+        var msteamsToken = await msteamsConnection.getAzureToken();
+        var msteamsEmail = await msteamsConnection.getAzureEmail(msteamsToken,stepContext.context.activity.conversation.id);   
+
+        systemData.Useralias = msteamsEmail;
+
+        let odataConnection = new OdataConnection();
+        let odataResult = await odataConnection.getSystemSet();
+
+        if(odataResult.results){
+            var systemChoices = [];
+            odataResult.results.forEach(function(result, index) {
+                systemChoices.push(result.SistMandt);
+            });
+
+            systemChoices.push('Cancelar');
+
+            return await stepContext.prompt(CHOICE_PROMPT, {
+                choices: ChoiceFactory.toChoices(systemChoices),
+                prompt: 'Seleccionar el sistema y mandante.',
+                style: ListStyle.heroCard
+            });
+        }else{
+            systemData.desbloqueo = false;
+
+            var message = 'No se encontraron sistemas SAP disponibles.'
+            let card = new Cards();
+            await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.errorMessage(message))]});
+
+            console.log('Fin Desbloqueo SAP Dialog');
+            return await stepContext.endDialog();
+        };     
+/*
+        var systemChoices = [];
+        systemChoices.push('DEV200');
+        systemChoices.push('DEV400');
+        systemChoices.push('QAS400');
+        systemChoices.push('PRD400');
+        systemChoices.push('Cancelar');
+
+        systemData.Useralias = 'aachin@omniasolution.com';
+
+        return await stepContext.prompt(CHOICE_PROMPT, {
+            choices: ChoiceFactory.toChoices(systemChoices),
+            prompt: 'Seleccionar el sistema y mandante para el besbloqueo de usuario SAP.',
+            style: ListStyle.heroCard
+        });   
+        */
+    }
+
+    async desbloqueoStep(stepContext){
+        const systemData = stepContext.options;
+
+        systemData.option = stepContext.result.value;
+
+        switch(systemData.option) {
+            case 'Cancelar': 
+                return stepContext;
+            default:               
+                let odataConnection = new OdataConnection();
+                let odataResult = await odataConnection.unlockUser(systemData.option, systemData.Useralias);
+                
+                let card = new Cards();
+                switch(odataResult.type){
+                    case 'S':
+                        await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.desbloqueoSap(odataResult.user, odataResult.system))]});
+                        break;
+                    case 'E':
+                        await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.desbloqueoSapError(odataResult.message))]});
+                        break;
+                }
+                console.log('Fin Menú Desbloqueo SAP Dialog');
+                return await stepContext.endDialog();
+
+/*             let card = new Cards();
+            await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.desbloqueoSap('AACHIN', systemData.option))]});
+            
+            console.log('Fin Desbloqueo Usuario SAP');
+            return await stepContext.endDialog(); */
+        }
+    }
+}
+
+module.exports.DesbloqueoSapDialog = DesbloqueoSapDialog;
+```
+
+Modificar el archivo **menuInicialDialog.js** agregar la llamada a la librería:
+
+```
+const { DesbloqueoSapDialog } = require("./desbloqueoSapDialog");
+```
+
+Crear la constante **DESBLOQUEO_SAP_DIALOG**.
+
+```
+const DESBLOQUEO_SAP_DIALOG = 'desbloqueoSapDialog';
+```
+
+Agregar la llamada al díalogo.
+
+```
+.addDialog(new DesbloqueoSapDialog(DESBLOQUEO_SAP_DIALOG))
+```
+
+Agregar el llamado al diálogo en el método **callOptionStep**.
+
+```
+return await stepContext.beginDialog(DESBLOQUEO_SAP_DIALOG);
+```
