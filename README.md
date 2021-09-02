@@ -313,9 +313,11 @@ class MenuInicialDialog extends ComponentDialog{
             case '1':
                 console.log('Desbloqueo Usuario SAP');
                 await stepContext.context.sendActivity(`Has seleccionado la opción 1.`);
+                return await stepContext;
             case '2':
                 console.log('Reinicio Usuario SAP');
                 await stepContext.context.sendActivity(`Has seleccionado la opción 2.`);
+                return await stepContext;
             default:
                 return await stepContext.endDialog();
         }
@@ -409,6 +411,17 @@ this.onMessage(async (context, next) => {
 });   
 ```
 
+Crear el método **onDialog**:
+
+```
+this.onDialog(async (context, next) => {
+    await this.conversationState.saveChanges(context, false);
+    await this.userState.saveChanges(context, false);
+
+    await next();
+});
+```
+
 Modificar el archivo **index.js**.
 
 Agregar librerias.
@@ -432,4 +445,69 @@ Crear la variable **dialog** y modificar la creación de la variable **omniaBot*
 ```
 const dialog = new MainDialog('mainDialog');
 const omniaBot = new OmniaBot(conversationState, userState, dialog);
+```
+
+## Paso 7:
+
+Modificar el archivo **menuInicialDialog**, crear el método **optionPromptValidator**.
+
+```
+async optionPromptValidator(promptContext) {
+    return promptContext.recognized.succeeded && promptContext.recognized.value > 0 && promptContext.recognized.value < 2;
+}
+```
+
+Modificar el método **constructor**, reemplazar los diálogos añadidos.
+
+```
+this.addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
+    this.initialStep.bind(this),
+    this.callOptionStep.bind(this),
+    this.finalStep.bind(this)
+]))
+    .addDialog(new NumberPrompt(NUMBER_PROMPT, this.optionPromptValidator));
+```
+
+Reemplazar el método **initialStep**:
+
+```
+async initialStep(stepContext) {    
+    const dialogData = stepContext.options;
+
+    let userName = stepContext.context.activity.from.name;
+
+    const promptText = `¿Cómo te puedo ayudar?
+    \n**1.** Desbloqueo de usuario SAP
+    \n**2.** Reinicio de contraseña SAP
+    \n Ingresa el número.`;
+
+    const retryPromptText = `Ingresar una opción válida.`
+
+    return await stepContext.prompt(NUMBER_PROMPT, { prompt: promptText, retryPrompt:  retryPromptText });
+}
+```
+
+## Paso 8:
+
+Modificar archivo **bot.js**, agregar reemplazar el código para el método **onMessage**.
+
+```
+this.onMessage(async (context, next) => {        
+    const currentDialog = await this.dialogState.get(context);
+    if (currentDialog === undefined) {
+        let userName = context.activity.from.name;
+        await context.sendActivity(`Hola **${userName}**, por favor selecciona una de las opciones disponibles:`);        
+
+        //console.log('No dialogs started');
+    } else if (currentDialog.dialogStack && currentDialog.dialogStack.length > 0) {
+        //console.log('Dialog is running');
+    } else {
+        //console.log('Dialog is not running');
+    }
+
+    await (this.mainDialog).run(context, this.dialogState);
+    
+    // By calling next() you ensure that the next BotHandler is run.
+    await next();
+});
 ```

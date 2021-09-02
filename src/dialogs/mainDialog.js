@@ -35,7 +35,6 @@ class MainDialog extends ComponentDialog {
 
         const dialogContext = await dialogSet.createContext(context);
         const results = await dialogContext.continueDialog();
-
         if (results.status === DialogTurnStatus.empty && newDialog === true) {
             console.log('Nuevo diálogo Main Dialog');
             await dialogContext.beginDialog(MAIN_DIALOG);
