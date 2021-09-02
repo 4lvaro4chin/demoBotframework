@@ -8,6 +8,18 @@ Crear la aplicación NodeJs con el comando:
   npm init
 ```
 
+```
+package name: (demobotframework)
+version: (1.0.0)
+description: Demo Botframework para el uso de diálogos
+entry point: (index.js)
+test command:
+git repository: (https://github.com/4lvaro4chin/demoBotframework.git)
+keywords:
+author: 4lvaro4chin
+license: (ISC)
+```
+
 ## Paso 2:
 
 Instalar los módulos npm:
