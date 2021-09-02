@@ -33,6 +33,7 @@ Instalar los módulos npm:
     "dotenv": "^10.0.0",
     "node-fetch": "^2.6.1",
     "nodemon": "^2.0.12",
+    "path": "^0.12.7",
     "restify": "^8.5.1",
     "url": "^0.11.0"
   }
