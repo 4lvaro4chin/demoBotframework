@@ -1021,7 +1021,6 @@ const { CardFactory } = require("botbuilder");
 const { HelperDialog } = require("./helperDialog");
 const { Cards } = require('../cards/card');
 const { OdataConnection } = require('../odata/odataConnection');
-const { MsteamsConnection } = require('../msteams/msteamsConnection');
 
 const CHOICE_PROMPT = 'choicePrompt';
 const WATERFALL_DIALOG = 'waterfallDialog';
@@ -1043,11 +1042,7 @@ class DesbloqueoSapDialog extends HelperDialog {
     async systemChoiceStep(stepContext) {
         const systemData = stepContext.options;
 
-        let msteamsConnection = new MsteamsConnection();
-        var msteamsToken = await msteamsConnection.getAzureToken();
-        var msteamsEmail = await msteamsConnection.getAzureEmail(msteamsToken,stepContext.context.activity.conversation.id);   
-
-        systemData.Useralias = msteamsEmail;
+        systemData.Useralias = "aachin@omniasolution.com";
 
         let odataConnection = new OdataConnection();
         let odataResult = await odataConnection.getSystemSet();
