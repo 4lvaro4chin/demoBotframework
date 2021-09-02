@@ -489,7 +489,7 @@ async initialStep(stepContext) {
 
 ## Paso 8:
 
-Modificar archivo **bot.js**, agregar reemplazar el código para el método **onMessage**.
+Modificar archivo **bot.js**, reemplazar el código para el método **onMessage**.
 
 ```
 this.onMessage(async (context, next) => {        
@@ -510,4 +510,90 @@ this.onMessage(async (context, next) => {
     // By calling next() you ensure that the next BotHandler is run.
     await next();
 });
+```
+
+## Paso 9:
+
+Modificar el archivo **mainDialog**, Agregar el paso **continueStep** para **WaterfallDialog** y agregar el diálogo ChoicePrompt.
+
+```
+this.addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
+    this.initialStep.bind(this),
+    this.continueStep.bind(this),
+    this.finalStep.bind(this)
+]))
+    .addDialog(new MenuInicialDialog(MENU_INICIAL_DIALOG))
+    .addDialog(new ChoicePrompt(CHOICE_PROMPT));
+```
+
+Crear la constante:
+
+```
+const CHOICE_PROMPT = 'choicePrompt';
+```
+
+
+Crear el método **continueStep**.
+
+```
+async continueStep(stepContext){
+    return await stepContext.prompt(CHOICE_PROMPT, {
+        choices: ChoiceFactory.toChoices(['Si, ver menú.','No, gracias.']),
+        prompt: '¿Necesitas que te ayude con algo más?.',
+        style: ListStyle.heroCard
+    });
+}
+```
+
+Agregar las librerías **ChoicePrompt**, **ChoiceFactory** y **ListStyle**.
+
+Modificar el método **finalStep**, reemplazar el código por:
+
+```
+async finalStep(stepContext) {
+    const menuData = stepContext.options;
+
+    menuData.option = stepContext.result.value
+
+    switch(menuData.option){
+        case 'Si, ver menú.':
+            console.log('Reiniciar Menú Inicial Dialog');
+            break;
+        case 'No, gracias.':
+            let userName = stepContext.context.activity.from.name;
+            await stepContext.context.sendActivity(`**${ userName }** ha sido un gusto poder ayudarte. Si necesitas algo más, no dudes en contactarme.`);
+            break;
+    }
+
+    console.log('Fin Main Dialog');
+    return await stepContext.endDialog();
+}
+```
+
+Modíficar el método **run** , reemplazar el código por:
+
+```
+async run(context, dialogState) {
+    var newDialog = true;
+
+    const dialogSet = new DialogSet(dialogState);
+    dialogSet.add(this);
+
+    const dialogContext = await dialogSet.createContext(context);
+    const results = await dialogContext.continueDialog();
+
+    switch(context.activity.text){
+        case 'Si, ver menú.':
+            console.log('Intencion continuar Diálogo');
+            newDialog = false;
+            await dialogContext.cancelAllDialogs();
+            await dialogContext.beginDialog(MAIN_DIALOG);
+            break;
+    }
+
+    if (results.status === DialogTurnStatus.empty && newDialog === true) {
+        console.log('Nuevo diálogo Main Dialog');
+        await dialogContext.beginDialog(MAIN_DIALOG);
+    }
+}
 ```
