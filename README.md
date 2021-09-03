@@ -1160,6 +1160,7 @@ Agregar el parámetro **expireAfterSeconds** al método **constructor** del arch
 ```
 constructor(conversationState, userState, dialog, expireAfterSeconds) {
 
+this.lastAccessedTimeProperty = this.conversationState.createProperty('LastAccessedTime');
 this.expireAfterSeconds = expireAfterSeconds;
 ```
 
