@@ -56,7 +56,7 @@ const userState = new UserState(memoryStorage);
 
 // Create the main dialog.
 const dialog = new MainDialog('mainDialog');
-const omniaBot = new OmniaBot(conversationState, userState, dialog);
+const omniaBot = new OmniaBot(conversationState, userState, dialog, process.env.ExpireAfterSeconds);
 
 // Listen for incoming requests.
 server.post('/api/messages', (req, res) => {
