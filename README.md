@@ -1010,3 +1010,229 @@ Llamar al diálogo en el método **callOptionStep**.
 ```
 return await stepContext.beginDialog(REINICIO_SAP_DIALOG);
 ```
+
+## Paso 11:
+
+Crear el archivo **desbloqueoSapDialog.js** en la carpeta **dialogs**.
+
+```
+const { ComponentDialog, ChoicePrompt, WaterfallDialog, ChoiceFactory, ListStyle } = require("botbuilder-dialogs");
+const { CardFactory } = require("botbuilder");
+const { Cards } = require('../cards/card');
+const { OdataConnection } = require('../odata/odataConnection');
+
+const CHOICE_PROMPT = 'choicePrompt';
+const WATERFALL_DIALOG = 'waterfallDialog';
+
+class DesbloqueoSapDialog extends ComponentDialog {
+    constructor(dialogId) {
+        super(dialogId);
+
+        this.addDialog(new ChoicePrompt(CHOICE_PROMPT))
+            .addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
+                this.systemChoiceStep.bind(this),
+                this.desbloqueoStep.bind(this)
+            ])
+        );
+            
+        this.initialDialogId = WATERFALL_DIALOG;
+    }
+
+    async systemChoiceStep(stepContext) {
+        const systemData = stepContext.options;
+
+        systemData.Useralias = "aachin@omniasolution.com";
+
+        let odataConnection = new OdataConnection();
+        let odataResult = await odataConnection.getSystemSet();
+
+        if(odataResult.results){
+            var systemChoices = [];
+            odataResult.results.forEach(function(result, index) {
+                systemChoices.push(result.SistMandt);
+            });
+
+            systemChoices.push('Cancelar');
+
+            return await stepContext.prompt(CHOICE_PROMPT, {
+                choices: ChoiceFactory.toChoices(systemChoices),
+                prompt: 'Seleccionar el sistema y mandante.',
+                style: ListStyle.heroCard
+            });
+        }else{
+            systemData.desbloqueo = false;
+
+            var message = 'No se encontraron sistemas SAP disponibles.'
+            let card = new Cards();
+            await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.errorMessage(message))]});
+
+            console.log('Fin Desbloqueo SAP Dialog');
+            return await stepContext.endDialog();
+        };     
+/*
+        var systemChoices = [];
+        systemChoices.push('DEV200');
+        systemChoices.push('DEV400');
+        systemChoices.push('QAS400');
+        systemChoices.push('PRD400');
+        systemChoices.push('Cancelar');
+
+        systemData.Useralias = 'aachin@omniasolution.com';
+
+        return await stepContext.prompt(CHOICE_PROMPT, {
+            choices: ChoiceFactory.toChoices(systemChoices),
+            prompt: 'Seleccionar el sistema y mandante para el besbloqueo de usuario SAP.',
+            style: ListStyle.heroCard
+        });   
+        */
+    }
+
+    async desbloqueoStep(stepContext){
+        const systemData = stepContext.options;
+
+        systemData.option = stepContext.result.value;
+
+        switch(systemData.option) {
+            case 'Cancelar': 
+                return stepContext;
+            default:               
+                let odataConnection = new OdataConnection();
+                let odataResult = await odataConnection.unlockUser(systemData.option, systemData.Useralias);
+                
+                let card = new Cards();
+                switch(odataResult.type){
+                    case 'S':
+                        await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.desbloqueoSap(odataResult.user, odataResult.system))]});
+                        break;
+                    case 'E':
+                        await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.desbloqueoSapError(odataResult.message))]});
+                        break;
+                }
+                console.log('Fin Menú Desbloqueo SAP Dialog');
+                return await stepContext.endDialog();
+
+/*             let card = new Cards();
+            await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.desbloqueoSap('AACHIN', systemData.option))]});
+            
+            console.log('Fin Desbloqueo Usuario SAP');
+            return await stepContext.endDialog(); */
+        }
+    }
+}
+
+module.exports.DesbloqueoSapDialog = DesbloqueoSapDialog;
+```
+
+Modificar el archivo **menuInicialDialog.js** agregar la llamada a la librería:
+
+```
+const { DesbloqueoSapDialog } = require("./desbloqueoSapDialog");
+```
+
+Crear la constante **DESBLOQUEO_SAP_DIALOG**.
+
+```
+const DESBLOQUEO_SAP_DIALOG = 'desbloqueoSapDialog';
+```
+
+Agregar la llamada al díalogo.
+
+```
+.addDialog(new DesbloqueoSapDialog(DESBLOQUEO_SAP_DIALOG))
+```
+
+Agregar el llamado al diálogo en el método **callOptionStep**.
+
+```
+return await stepContext.beginDialog(DESBLOQUEO_SAP_DIALOG);
+```
+
+## Paso 12
+
+Definir la variable de entorno **ExpireAfterSeconds** en el archivo **.env**.
+
+```
+ExpireAfterSeconds=7200
+```
+
+Agregar el parámetro **expireAfterSeconds** al método **constructor** del archivo **bot.js** e iniciar la variable.
+
+```
+constructor(conversationState, userState, dialog, expireAfterSeconds) {
+
+this.lastAccessedTimeProperty = this.conversationState.createProperty('LastAccessedTime');
+this.expireAfterSeconds = expireAfterSeconds;
+```
+
+Redefinir el método **run** de la clase **OmniaBot**.
+
+```
+async run(context) {
+    // Retrieve the property value, and compare it to the current time.
+    const now = new Date();
+    const lastAccess = new Date(await this.lastAccessedTimeProperty.get(context, now.toISOString()));
+    if (now !== lastAccess && ((now.getTime() - lastAccess.getTime()) / 1000) >= this.expireAfterSeconds) {
+        // Notify the user that the conversation is being restarted.
+        let userName = context.activity.from.name;
+        let card = new Cards();
+        await context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.reconexion(userName))]});
+
+        // Clear state.
+        await this.conversationState.clear(context);
+    }
+
+    await super.run(context);
+}
+```
+
+Agregar el método **** en el archivo **card.js**.
+
+```
+async reconexion(){
+    const json = {
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "type": "AdaptiveCard",
+        "version": "1.3",
+        "body": [
+            {
+                "type": "ColumnSet",
+                "columns": [
+                    {
+                        "type": "Column",
+                        "items": [
+                            {
+                                "type": "Image",
+                                "size": "Small",
+                                "url": "https://cdn.icon-icons.com/icons2/1724/PNG/512/4023883-bot-head-robot-robotics_112865.png"
+                            }
+                        ],
+                        "width": "auto"
+                    },
+                    {
+                        "type": "Column",
+                        "items": [
+                            {
+                                "type": "TextBlock",
+                                "text": `¡Bienvenido nuevamente!`,
+                                "size": "Default",
+                                "fontType": "Default",
+                                "height": "stretch",
+                                "wrap": true
+                            }
+                        ],
+                        "width": "stretch"
+                    }
+                ]
+            }                
+        ]
+    };
+
+    return json;
+}
+```
+
+Modificar la creación de la variable **omniaBot** en el archivo **index.js**.
+
+```
+const omniaBot = new OmniaBot(conversationState, userState, dialog, process.env.ExpireAfterSeconds);
+```
