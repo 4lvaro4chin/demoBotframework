@@ -1147,6 +1147,97 @@ Agregar el llamado al diálogo en el método **callOptionStep**.
 return await stepContext.beginDialog(DESBLOQUEO_SAP_DIALOG);
 ```
 
+Modificar el archivo **card.js**, agregar los métodos **desbloqueoSap** y **desbloqueoSapError**.
+
+```
+async desbloqueoSap(user, system){
+        const json = {
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "type": "AdaptiveCard",
+            "version": "1.3",
+            "body": [
+                {
+                    "type": "ColumnSet",
+                    "columns": [
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "Image",
+                                    "size": "Small",
+                                    "url": "https://cdn.icon-icons.com/icons2/1724/PNG/512/4023883-bot-head-robot-robotics_112865.png"
+                                }
+                            ],
+                            "width": "auto"
+                        },
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": `Se ha desbloqueado el usuario **${ user }** en el sistema **${ system }**.`,
+                                    "size": "Default",
+                                    "fontType": "Default",
+                                    "height": "stretch",
+                                    "wrap": true
+                                }
+                            ],
+                            "width": "stretch"
+                        }
+                    ]
+                }                
+            ]
+        };
+        
+        return json;
+    }
+```
+
+```
+async desbloqueoSapError(message){
+        const json = {
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "type": "AdaptiveCard",
+            "version": "1.3",
+            "body": [
+                {
+                    "type": "ColumnSet",
+                    "columns": [
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "Image",
+                                    "size": "Small",
+                                    "url": "https://cdn.icon-icons.com/icons2/586/PNG/512/robot-head-with-cardiogram_icon-icons.com_55279.png"
+                                }
+                            ],
+                            "width": "auto"
+                        },
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": `Se ha identificado un error en SAP.
+                                    \n**${ message }**`,
+                                    "size": "Default",
+                                    "fontType": "Default",
+                                    "height": "stretch",
+                                    "wrap": true
+                                }
+                            ],
+                            "width": "stretch"
+                        }
+                    ]
+                } 
+            ]
+        };
+        
+        return json;
+    }
+```
+
 ## Paso 12
 
 Definir la variable de entorno **ExpireAfterSeconds** en el archivo **.env**.
