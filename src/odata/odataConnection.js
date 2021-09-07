@@ -12,7 +12,7 @@ class OdataConnection {
         const resultOdata = await axios.get(url, {
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
+                'Accept': 'application/json'
             },
             auth: {
               username: process.env.OdataUser,
@@ -111,6 +111,81 @@ class OdataConnection {
         });
 
         return resultOdata;
+    }
+
+    async createUser(userData) {
+        let url;
+        url = `${ process.env.OdataHostUrlOCS200 }/SystemSet`;
+
+        const resultToken = await axios.get(url, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'x-csrf-token': 'fetch'
+            },
+            auth: {
+              username: process.env.OdataUser,
+              password: process.env.OdataPassword
+            }
+        }).then((response) => {
+            var string = JSON.stringify(response.headers);
+            var objectValue = JSON.parse(string);
+            return objectValue;
+        })
+        .catch((error) => { 
+            return error;
+        });
+                
+        url = `${ process.env.OdataHostUrlMdkcrud }/UserSet`;
+
+        var bodyJSON = JSON.stringify({
+            "Uname" : `${ userData.uname }`,
+            "FirstName" : `${ userData.firstName }`,
+            "LastName" : `${ userData.lastName }`,
+            "MobNumber" : `${ userData.mobNumber }`,
+            "SmtpAddr" : `${ userData.email }`,
+            "DateBirth" : `\/Date(${ userData.dateBirthJSON })\/`
+        });
+
+        const resultOdata = await axios.post(url, bodyJSON, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'x-csrf-token': resultToken['x-csrf-token'],
+                'Cookie': resultToken['set-cookie']
+            },
+            auth: {
+              username: process.env.OdataUser,
+              password: process.env.OdataPassword
+            }
+        })
+        .then((response) => { 
+            var jsonSuccess = {
+                'type' : 'S',
+                'message' : `Se ha registrado el usuario ${ userData.uname }.`
+            }
+            return jsonSuccess;
+        })
+        .catch((error) => {
+            console.log(error.response.status);
+
+            switch(error.response.status){
+                case 500:   
+                    var jsonError = {
+                        'type' : 'E',
+                        'message' : 'Ya existe un usuario con el ID indicado.'
+                    }
+                    return jsonError;
+                default:
+                    var jsonError = {
+                        'type' : 'E',
+                        'message' : 'Error en la ejecución del OData.'
+                    }
+                    return jsonError;
+            }
+        });
+
+        return resultOdata;        
     }
 }
 

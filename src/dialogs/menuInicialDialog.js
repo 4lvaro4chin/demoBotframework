@@ -1,10 +1,14 @@
 const { ComponentDialog, NumberPrompt, WaterfallDialog } = require("botbuilder-dialogs");
 const { ReinicioSapDialog } = require("./reinicioSapDialog");
 const { DesbloqueoSapDialog } = require("./desbloqueoSapDialog");
+const { RegistroUsuarioDialog } = require("./registroUsuarioDialog");
+const { RegistroUserDialog } = require("./registroUserDialog");
 
 const NUMBER_PROMPT = 'numberPrompt';
 const WATERFALL_DIALOG = 'waterfallDialog';
 const REINICIO_SAP_DIALOG = 'reinicioSapDialog';
+const REGISTRO_USUARIO_DIALOG = 'registroUsuarioDialog';
+const REGISTRO_USER_DIALOG = 'registroUserDialog';
 const DESBLOQUEO_SAP_DIALOG = 'desbloqueoSapDialog';
 
 class MenuInicialDialog extends ComponentDialog{
@@ -18,6 +22,8 @@ class MenuInicialDialog extends ComponentDialog{
         ]))
             .addDialog(new ReinicioSapDialog(REINICIO_SAP_DIALOG))
             .addDialog(new DesbloqueoSapDialog(DESBLOQUEO_SAP_DIALOG))
+            .addDialog(new RegistroUsuarioDialog(REGISTRO_USUARIO_DIALOG))
+            .addDialog(new RegistroUserDialog(REGISTRO_USER_DIALOG))
             .addDialog(new NumberPrompt(NUMBER_PROMPT, this.optionPromptValidator));
 
         this.initialDialogId = WATERFALL_DIALOG;
@@ -29,6 +35,7 @@ class MenuInicialDialog extends ComponentDialog{
         const promptText = `¿Cómo te puedo ayudar?
         \n**1.** Desbloqueo de usuario SAP
         \n**2.** Reinicio de contraseña SAP
+        \n**3.** Registrar usuario
         \n Ingresa el número.`;
     
         const retryPromptText = `Ingresar una opción válida.`
@@ -48,6 +55,10 @@ class MenuInicialDialog extends ComponentDialog{
             case '2':
                 console.log('Reinicio Usuario SAP');
                 return await stepContext.beginDialog(REINICIO_SAP_DIALOG);
+            case '3':
+                console.log('Registro Usuario');
+                return await stepContext.beginDialog(REGISTRO_USUARIO_DIALOG);
+                //return await stepContext.beginDialog(REGISTRO_USER_DIALOG);
             default:
                 return await stepContext.endDialog();
         }
@@ -59,7 +70,7 @@ class MenuInicialDialog extends ComponentDialog{
     }
 
     async optionPromptValidator(promptContext) {
-        return promptContext.recognized.succeeded && promptContext.recognized.value > 0 && promptContext.recognized.value < 3;
+        return promptContext.recognized.succeeded && promptContext.recognized.value > 0 && promptContext.recognized.value < 4;
     }
 }
 
