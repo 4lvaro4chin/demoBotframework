@@ -142,7 +142,7 @@ class OdataConnection {
             "Uname" : `${ userData.uname }`,
             "FirstName" : `${ userData.firstName }`,
             "LastName" : `${ userData.lastName }`,
-            "MobNumber" : `${ userData.mobNumber }`,
+            "MobNumber" : `${ userData.celphone }`,
             "SmtpAddr" : `${ userData.email }`,
             "DateBirth" : `\/Date(${ userData.dateBirthJSON })\/`
         });

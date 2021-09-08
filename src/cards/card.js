@@ -308,7 +308,112 @@ class Cards {
         };
     
         return json;
-    }    
+    }
+
+    async registrarUsuario() {
+        const json = {
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "type": "AdaptiveCard",
+            "version": "1.3",
+            "body": [
+                {
+                    "type": "TextBlock",
+                    "size": "Medium",
+                    "weight": "Bolder",
+                    "horizontalAlignment": "Center",
+                    "wrap": true,
+                    "text": "Registrar usuario"
+                },
+                {
+                    "type": "TextBlock",
+                    "text": "User ID",
+                    "wrap": true
+                },
+                {
+                    "type": "Input.Text",
+                    "style": "text",
+                    "id": "valUserID"
+                },
+                {
+                    "type": "TextBlock",
+                    "text": "Nombres",
+                    "wrap": true
+                },
+                {
+                    "type": "Input.Text",
+                    "style": "Url",
+                    "id": "valFirstName"
+                },
+                {
+                    "type": "TextBlock",
+                    "text": "Apellidos",
+                    "wrap": true
+                },
+                {
+                    "type": "Input.Text",
+                    "style": "Email",
+                    "id": "valLastName"
+                },
+                {
+                    "type": "TextBlock",
+                    "text": "Celular",
+                    "wrap": true
+                },
+                {
+                    "type": "Input.Text",
+                    "style": "Tel",
+                    "id": "valMobilePhone"
+                },
+                {
+                    "type": "TextBlock",
+                    "text": "Fecha Nacimiento\n",
+                    "wrap": true
+                },
+                {
+                    "type": "Input.Date",
+                    "id": "DateVal",
+                    "value": "2017-09-20"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "Action.Submit",
+                    "title": "Submit",
+                    "data": {
+                        "id": "1234567890"
+                    }
+                },
+                {
+                    "type": "Action.ShowCard",
+                    "title": "Show Card",
+                    "card": {
+                        "type": "AdaptiveCard",
+                        "body": [
+                            {
+                                "type": "TextBlock",
+                                "text": "Enter comment",
+                                "wrap": true
+                            },
+                            {
+                                "type": "Input.Text",
+                                "style": "text",
+                                "id": "CommentVal"
+                            }
+                        ],
+                        "actions": [
+                            {
+                                "type": "Action.Submit",
+                                "title": "OK"
+                            }
+                        ],
+                        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json"
+                    }
+                }
+            ]
+        };
+
+        return json;
+    }
 }
 
 module.exports.Cards = Cards;
