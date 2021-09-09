@@ -1362,7 +1362,7 @@ async createUser(userData) {
             "Uname" : `${ userData.uname }`,
             "FirstName" : `${ userData.firstName }`,
             "LastName" : `${ userData.lastName }`,
-            "MobNumber" : `${ userData.mobNumber }`,
+            "MobNumber" : `${ userData.celphone }`,
             "SmtpAddr" : `${ userData.email }`,
             "DateBirth" : `\/Date(${ userData.dateBirthJSON })\/`
         });
@@ -1432,7 +1432,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
             this.unameStep.bind(this),
             this.firstNameStep.bind(this),
             this.lastNameStep.bind(this),
-            this.mobNumberStep.bind(this),
+            this.celphoneStep.bind(this),
             this.emailStep.bind(this),
             this.dateBirthStep.bind(this),
             this.confirmStep.bind(this),
@@ -1472,7 +1472,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
         return await stepContext.prompt(TEXT_PROMPT, { prompt: promptText });
     }
 
-    async mobNumberStep(stepContext) {
+    async celphoneStep(stepContext) {
         const userData = stepContext.options;
 
         userData.lastName = stepContext.result;
@@ -1484,7 +1484,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
     async emailStep(stepContext) {
         const userData = stepContext.options;
 
-        userData.mobNumber = stepContext.result;
+        userData.celphone = stepContext.result;
 
         const promptText = 'Ingresar email:';
         return await stepContext.prompt(EMAIL_TEXT_PROMPT, { prompt: promptText });
@@ -1503,10 +1503,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
         const userData = stepContext.options;
 
         userData.dateBirth = stepContext.result;
-        //var splitted = userData.dateBirth[0].value.split("-");
-        //userData.dateBirthJSON = new Date(Date.UTC(splitted[2], splitted[0], splitted[1])).getTime();
         userData.dateBirthJSON = new Date(userData.dateBirth[0].value).valueOf();
-        //userData.dateBirth = (new Date(parseInt('19850717'))).toJSON()
 
         return await stepContext.prompt(CHOICE_PROMPT, {
             choices: ChoiceFactory.toChoices(['Si','No']),
@@ -1528,7 +1525,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
                     \n**User ID:** ${ userData.uname }
                     \n**Nombres:** ${ userData.firstName }
                     \n**Apellidos:** ${ userData.lastName }
-                    \n**Celular:** ${ userData.mobNumber }
+                    \n**Celular:** ${ userData.celphone }
                     \n**Email:** ${ userData.email }
                     \n**Fecha de nacimiento:** ${ userData.dateBirth[0].value }
                     \n**Fecha JSON:** ${ userData.dateBirthJSON }`;
@@ -1605,4 +1602,219 @@ Modificar el método **optionPromptValidator**.
 async optionPromptValidator(promptContext) {
     return promptContext.recognized.succeeded && promptContext.recognized.value > 0 && promptContext.recognized.value < 4;
 }
+```
+
+## Paso 14
+
+Crear el archivo **registroUsuarioFormDialog.js** en la carpeta **dialogs**.
+
+```
+const { ComponentDialog, WaterfallDialog, TextPrompt } = require("botbuilder-dialogs");
+const {CardFactory } = require('botbuilder');
+const { OdataConnection } = require('../odata/odataConnection');
+const { Cards } = require('../cards/card');
+
+const TEXT_PROMPT = 'textPrompt';
+const WATERFALL_DIALOG = 'waterfallDialog';
+
+class RegistroUsuarioFormDialog extends ComponentDialog {
+    constructor(dialogId) {
+        super(dialogId);
+
+        this.addDialog(new WaterfallDialog(WATERFALL_DIALOG, [
+            this.initialStep.bind(this),
+            this.finalStep.bind(this)
+        ]))
+            .addDialog(new TextPrompt(TEXT_PROMPT, this.promptValidator));
+
+        this.initialDialogId = WATERFALL_DIALOG;
+    }
+    
+    async initialStep(stepContext) {
+        let card = new Cards();
+        await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.registrarUsuario())]});
+
+        const promptText = 'Esperando que ingrese los datos.';
+        return await stepContext.prompt(TEXT_PROMPT, { prompt: promptText });
+    }
+    
+    async finalStep(stepContext) {
+        const userData = stepContext.options;
+
+        // get adaptive card input value
+        console.log(stepContext.context.activity.value);
+
+        switch(stepContext.context.activity.value.id) {
+            case 'actionSave':
+                userData.uname = stepContext.context.activity.value.uname;
+                userData.firstName = stepContext.context.activity.value.firstName;
+                userData.lastName = stepContext.context.activity.value.lastName;
+                userData.celphone = stepContext.context.activity.value.celphone;
+                userData.email = stepContext.context.activity.value.email;
+                userData.dateBirth = stepContext.context.activity.value.dateBirth;
+                userData.dateBirthJSON = new Date(stepContext.context.activity.value.dateBirth).valueOf();
+                
+                let odataConnection = new OdataConnection();
+                let odataResult = await odataConnection.createUser(userData);
+
+                switch(odataResult.type){
+                    case 'S':
+                        const message = `Se creó el usuario con los datos:
+                        \n**User ID:** ${ userData.uname }
+                        \n**Nombres:** ${ userData.firstName }
+                        \n**Apellidos:** ${ userData.lastName }
+                        \n**Celular:** ${ userData.celphone }
+                        \n**Email:** ${ userData.email }
+                        \n**Fecha de nacimiento:** ${ userData.dateBirth }
+                        \n**Fecha JSON:** ${ userData.dateBirthJSON }`;
+                        await stepContext.context.sendActivity(message);
+                        break;
+                    case 'E':         
+                        let card = new Cards();
+                        await stepContext.context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.errorMessage(odataResult.message))]});
+                        break;
+                }
+        }
+
+        return await stepContext.endDialog();
+    }
+
+    async promptValidator(promptContext){
+        const activity = promptContext.context._activity;
+        return activity.type === 'message' && activity.channelData.postBack;
+    }
+}
+
+module.exports.RegistroUsuarioFormDialog = RegistroUsuarioFormDialog;
+```
+
+Modificar el archivo **menuInicialDialog.js**, agregar la referencia a la clase **RegistroUsuarioFormDialog**.
+
+```
+const { RegistroUsuarioFormDialog } = require("./registroUsuarioFormDialog");
+```
+
+Crear la constante **REGISTRO_USUARIO_FORM_DIALOG** para el ID del diálogo.
+
+```
+const REGISTRO_USUARIO_FORM_DIALOG = 'registroUsuarioFormDialog';
+```
+
+Agregar el diálogo.
+
+```
+.addDialog(new RegistroUsuarioFormDialog(REGISTRO_USUARIO_FORM_DIALOG))
+```
+
+Agregar la opción 4 para el menú.
+
+```
+const promptText = `¿Cómo te puedo ayudar?
+        \n**1.** Desbloqueo de usuario SAP
+        \n**2.** Reinicio de contraseña SAP
+        \n**3.** Registrar usuario
+        \n**4.** Registrar usuario (form)
+        \n Ingresa el número.`;
+```
+
+Agregar el llamado al diálogo **REGISTRO_USUARIO_FORM_DIALOG**.
+
+```
+case '4':
+    console.log('Registro Usuario Form');
+    return await stepContext.beginDialog(REGISTRO_USUARIO_FORM_DIALOG);
+```
+
+Modificar el el método **optionPromptValidator** de validación para el menú.
+
+```
+async optionPromptValidator(promptContext) {
+    return promptContext.recognized.succeeded && promptContext.recognized.value > 0 && promptContext.recognized.value < 5;
+}
+```
+
+Modificar el archivo **card.js**, agregar el método **registrarUsuario**.
+
+```
+async registrarUsuario() {
+        const json = {
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "type": "AdaptiveCard",
+            "version": "1.3",
+            "body": [
+                {
+                    "type": "TextBlock",
+                    "size": "Large",
+                    "weight": "Bolder",
+                    "text": "Crear Usuario",
+                    "horizontalAlignment": "Center",
+                    "wrap": true
+                },
+                {
+                    "type": "Input.Text",
+                    "style": "text",
+                    "id": "uname",
+                    "isRequired": true,
+                    "label": "User ID",
+                    "errorMessage": "Es necesario ingresar el User ID."
+                },
+                {
+                    "type": "Input.Text",
+                    "id": "firstName",
+                    "label": "Nombres",
+                    "isRequired": true,
+                    "errorMessage": "Es necesario ingresar por lo menos un Nombre"
+                },
+                {
+                    "type": "Input.Text",
+                    "id": "lastName",
+                    "label": "Apellidos",
+                    "isRequired": true,
+                    "errorMessage": "Es necesario ingresar los apellidos."
+                },
+                {
+                    "type": "Input.Text",
+                    "style": "Email",
+                    "id": "email",
+                    "label": "Email",
+                    "isRequired": true,
+                    "errorMessage": "Es necesario ingresar el email."
+                },
+                {
+                    "type": "Input.Text",
+                    "style": "Tel",
+                    "id": "celphone",
+                    "label": "Celular",
+                    "isRequired": true,
+                    "errorMessage": "Es necesario ingresar el celular."
+                },
+                {
+                    "type": "Input.Date",
+                    "id": "dateBirth",
+                    "label": "Fecha de nacimiento",
+                    "errorMessage": "Es necesario ingresar la fecha de nacimiento",
+                    "isRequired": true
+                }
+            ],
+            "actions": [
+                {
+                    "type": "Action.Submit",
+                    "title": "Guardar",
+                    "data": {
+                        "id": "actionSave"
+                    },
+                    "style": "positive"
+                },
+                {
+                    "type": "Action.Submit",
+                    "title": "Cancelar",
+                    "data": {
+                        "id": "actionCancel"
+                    }
+                }
+            ]
+        };
+
+        return json;
+    }
 ```
