@@ -18,7 +18,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
             this.unameStep.bind(this),
             this.firstNameStep.bind(this),
             this.lastNameStep.bind(this),
-            this.mobNumberStep.bind(this),
+            this.celphoneStep.bind(this),
             this.emailStep.bind(this),
             this.dateBirthStep.bind(this),
             this.confirmStep.bind(this),
@@ -58,7 +58,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
         return await stepContext.prompt(TEXT_PROMPT, { prompt: promptText });
     }
 
-    async mobNumberStep(stepContext) {
+    async celphoneStep(stepContext) {
         const userData = stepContext.options;
 
         userData.lastName = stepContext.result;
@@ -70,7 +70,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
     async emailStep(stepContext) {
         const userData = stepContext.options;
 
-        userData.mobNumber = stepContext.result;
+        userData.celphone = stepContext.result;
 
         const promptText = 'Ingresar email:';
         return await stepContext.prompt(EMAIL_TEXT_PROMPT, { prompt: promptText });
@@ -89,10 +89,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
         const userData = stepContext.options;
 
         userData.dateBirth = stepContext.result;
-        //var splitted = userData.dateBirth[0].value.split("-");
-        //userData.dateBirthJSON = new Date(Date.UTC(splitted[2], splitted[0], splitted[1])).getTime();
         userData.dateBirthJSON = new Date(userData.dateBirth[0].value).valueOf();
-        //userData.dateBirth = (new Date(parseInt('19850717'))).toJSON()
 
         return await stepContext.prompt(CHOICE_PROMPT, {
             choices: ChoiceFactory.toChoices(['Si','No']),
@@ -114,7 +111,7 @@ class RegistroUsuarioDialog extends ComponentDialog {
                     \n**User ID:** ${ userData.uname }
                     \n**Nombres:** ${ userData.firstName }
                     \n**Apellidos:** ${ userData.lastName }
-                    \n**Celular:** ${ userData.mobNumber }
+                    \n**Celular:** ${ userData.celphone }
                     \n**Email:** ${ userData.email }
                     \n**Fecha de nacimiento:** ${ userData.dateBirth[0].value }
                     \n**Fecha JSON:** ${ userData.dateBirthJSON }`;
