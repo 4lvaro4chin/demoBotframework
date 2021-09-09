@@ -2,13 +2,13 @@ const { ComponentDialog, NumberPrompt, WaterfallDialog } = require("botbuilder-d
 const { ReinicioSapDialog } = require("./reinicioSapDialog");
 const { DesbloqueoSapDialog } = require("./desbloqueoSapDialog");
 const { RegistroUsuarioDialog } = require("./registroUsuarioDialog");
-const { RegistroUserDialog } = require("./registroUserDialog");
+const { RegistroUsuarioFormDialog } = require("./registroUsuarioFormDialog");
 
 const NUMBER_PROMPT = 'numberPrompt';
 const WATERFALL_DIALOG = 'waterfallDialog';
 const REINICIO_SAP_DIALOG = 'reinicioSapDialog';
 const REGISTRO_USUARIO_DIALOG = 'registroUsuarioDialog';
-const REGISTRO_USER_DIALOG = 'registroUserDialog';
+const REGISTRO_USUARIO_FORM_DIALOG = 'registroUsuarioFormDialog';
 const DESBLOQUEO_SAP_DIALOG = 'desbloqueoSapDialog';
 
 class MenuInicialDialog extends ComponentDialog{
@@ -23,7 +23,7 @@ class MenuInicialDialog extends ComponentDialog{
             .addDialog(new ReinicioSapDialog(REINICIO_SAP_DIALOG))
             .addDialog(new DesbloqueoSapDialog(DESBLOQUEO_SAP_DIALOG))
             .addDialog(new RegistroUsuarioDialog(REGISTRO_USUARIO_DIALOG))
-            .addDialog(new RegistroUserDialog(REGISTRO_USER_DIALOG))
+            .addDialog(new RegistroUsuarioFormDialog(REGISTRO_USUARIO_FORM_DIALOG))
             .addDialog(new NumberPrompt(NUMBER_PROMPT, this.optionPromptValidator));
 
         this.initialDialogId = WATERFALL_DIALOG;
@@ -36,6 +36,7 @@ class MenuInicialDialog extends ComponentDialog{
         \n**1.** Desbloqueo de usuario SAP
         \n**2.** Reinicio de contraseña SAP
         \n**3.** Registrar usuario
+        \n**4.** Registrar usuario (form)
         \n Ingresa el número.`;
     
         const retryPromptText = `Ingresar una opción válida.`
@@ -58,7 +59,9 @@ class MenuInicialDialog extends ComponentDialog{
             case '3':
                 console.log('Registro Usuario');
                 return await stepContext.beginDialog(REGISTRO_USUARIO_DIALOG);
-                //return await stepContext.beginDialog(REGISTRO_USER_DIALOG);
+            case '4':
+                console.log('Registro Usuario Form');
+                return await stepContext.beginDialog(REGISTRO_USUARIO_FORM_DIALOG);
             default:
                 return await stepContext.endDialog();
         }
@@ -70,7 +73,7 @@ class MenuInicialDialog extends ComponentDialog{
     }
 
     async optionPromptValidator(promptContext) {
-        return promptContext.recognized.succeeded && promptContext.recognized.value > 0 && promptContext.recognized.value < 4;
+        return promptContext.recognized.succeeded && promptContext.recognized.value > 0 && promptContext.recognized.value < 5;
     }
 }
 

@@ -318,95 +318,72 @@ class Cards {
             "body": [
                 {
                     "type": "TextBlock",
-                    "size": "Medium",
+                    "size": "Large",
                     "weight": "Bolder",
+                    "text": "Crear Usuario",
                     "horizontalAlignment": "Center",
-                    "wrap": true,
-                    "text": "Registrar usuario"
-                },
-                {
-                    "type": "TextBlock",
-                    "text": "User ID",
                     "wrap": true
                 },
                 {
                     "type": "Input.Text",
                     "style": "text",
-                    "id": "valUserID"
-                },
-                {
-                    "type": "TextBlock",
-                    "text": "Nombres",
-                    "wrap": true
+                    "id": "uname",
+                    "isRequired": true,
+                    "label": "User ID",
+                    "errorMessage": "Es necesario ingresar el User ID."
                 },
                 {
                     "type": "Input.Text",
-                    "style": "Url",
-                    "id": "valFirstName"
+                    "id": "firstName",
+                    "label": "Nombres",
+                    "isRequired": true,
+                    "errorMessage": "Es necesario ingresar por lo menos un Nombre"
                 },
                 {
-                    "type": "TextBlock",
-                    "text": "Apellidos",
-                    "wrap": true
+                    "type": "Input.Text",
+                    "id": "lastName",
+                    "label": "Apellidos",
+                    "isRequired": true,
+                    "errorMessage": "Es necesario ingresar los apellidos."
                 },
                 {
                     "type": "Input.Text",
                     "style": "Email",
-                    "id": "valLastName"
-                },
-                {
-                    "type": "TextBlock",
-                    "text": "Celular",
-                    "wrap": true
+                    "id": "email",
+                    "label": "Email",
+                    "isRequired": true,
+                    "errorMessage": "Es necesario ingresar el email."
                 },
                 {
                     "type": "Input.Text",
                     "style": "Tel",
-                    "id": "valMobilePhone"
-                },
-                {
-                    "type": "TextBlock",
-                    "text": "Fecha Nacimiento\n",
-                    "wrap": true
+                    "id": "celphone",
+                    "label": "Celular",
+                    "isRequired": true,
+                    "errorMessage": "Es necesario ingresar el celular."
                 },
                 {
                     "type": "Input.Date",
-                    "id": "DateVal",
-                    "value": "2017-09-20"
+                    "id": "dateBirth",
+                    "label": "Fecha de nacimiento",
+                    "errorMessage": "Es necesario ingresar la fecha de nacimiento",
+                    "isRequired": true
                 }
             ],
             "actions": [
                 {
                     "type": "Action.Submit",
-                    "title": "Submit",
+                    "title": "Guardar",
                     "data": {
-                        "id": "1234567890"
-                    }
+                        "id": "actionSave"
+                    },
+                    "style": "positive"
                 },
                 {
-                    "type": "Action.ShowCard",
-                    "title": "Show Card",
-                    "card": {
-                        "type": "AdaptiveCard",
-                        "body": [
-                            {
-                                "type": "TextBlock",
-                                "text": "Enter comment",
-                                "wrap": true
-                            },
-                            {
-                                "type": "Input.Text",
-                                "style": "text",
-                                "id": "CommentVal"
-                            }
-                        ],
-                        "actions": [
-                            {
-                                "type": "Action.Submit",
-                                "title": "OK"
-                            }
-                        ],
-                        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json"
+                    "type": "Action.Submit",
+                    "title": "Cancelar",
+                    "data": {
+                        "id": "actionCancel"
                     }
                 }
             ]
