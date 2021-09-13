@@ -7,6 +7,7 @@ dotenv.config({ path: ENV_FILE });
 const restify = require('restify')
 const { BotFrameworkAdapter, MemoryStorage, ConversationState, UserState } = require('botbuilder');
 const { MainDialog  } = require('./src/dialogs/mainDialog');
+const { HanaConnection } = require('./src/hana/hanaConnection');
 
 // Import required bot configuration.
 // This bot's main dialog.
@@ -19,6 +20,8 @@ server.listen(process.env.port || process.env.PORT || 3978, () => {
     console.log('\nGet Bot Framework Emulator: https://aka.ms/botframework-emulator');
     console.log('\nTo talk to your bot, open the emulator select "Open Bot"');
 });
+
+server.use(restify.plugins.bodyParser());
 
 // Create adapter.
 // See https://aka.ms/about-bot-adapter to learn more about how bots work.
@@ -66,6 +69,24 @@ server.post('/api/messages', (req, res) => {
     });
 });
 
+server.post('/api/proactiveMessage', async (req, res) => {
+    try {
+        let hanaConnection = new HanaConnection();
+        let reference = await hanaConnection.getRefenceInHana(req.body.chatbotName, req.body.userEmail);
+        //let reference = await hanaConnection.getRefenceInHana('demoBotframework', 'aachin@omniasolution.com');
+        
+        await adapter.continueConversation(reference, async (turnContext) => {
+            await turnContext.sendActivity(req.body.message);
+        });
+
+        res.send(response(200, {success: 'Notify!!!', reference: reference}));
+    } catch (err) {
+        console.log(err)
+    
+        res.send(response(200, {error: err}));
+    }
+});
+
 // Listen for Upgrade requests for Streaming.
 server.on('upgrade', (req, socket, head) => {
     // Create an adapter scoped to this WebSocket connection to allow storing session data.
@@ -82,3 +103,10 @@ server.on('upgrade', (req, socket, head) => {
         await myBot.run(context);
     });
 });
+
+function response(statusCode, message) {
+    return {
+      statusCode: statusCode,
+      body: message
+    };
+}

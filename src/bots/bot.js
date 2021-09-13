@@ -1,5 +1,8 @@
-const { ActivityHandler, CardFactory } = require('botbuilder');
+const { ActivityHandler, CardFactory, TurnContext } = require('botbuilder');
 const { Cards } = require('../cards/card');
+const { HanaConnection } = require('../hana/hanaConnection')
+
+const CONVERSATION_REFERENCE = 'CONVERSATION_REFERENCE';
 
 class OmniaBot extends ActivityHandler {
     constructor(conversationState, userState, dialog, expireAfterSeconds) {
@@ -11,6 +14,7 @@ class OmniaBot extends ActivityHandler {
         this.dialogState = this.conversationState.createProperty('DialogState');
         this.lastAccessedTimeProperty = this.conversationState.createProperty('LastAccessedTime');
         this.expireAfterSeconds = expireAfterSeconds;
+        this.conversationReference = this.conversationState.createProperty(CONVERSATION_REFERENCE);
 
         this.onMessage(async (context, next) => {        
             const currentDialog = await this.dialogState.get(context);
@@ -39,6 +43,11 @@ class OmniaBot extends ActivityHandler {
                     let userName = membersAdded[cnt].name;
                     let card = new Cards();
                     await context.sendActivity({ attachments: [CardFactory.adaptiveCard(await card.welcome(userName))]});
+
+                    // store the conversation reference for the newly added user
+                    await this.storeConversationReference(context);
+                    let hanaConnection = new HanaConnection();
+                    await hanaConnection.saveRefenceInHana(context);                    
                 }
             }
             // By calling next() you ensure that the next BotHandler is run.
@@ -69,7 +78,13 @@ class OmniaBot extends ActivityHandler {
     
         await super.run(context);
     }
-    
+
+    async storeConversationReference(context) {
+        // pull the reference
+        const reference = TurnContext.getConversationReference(context.activity);
+        // store reference in memory using conversation data property
+        await this.conversationReference.set(context, reference);
+    }
 }
 
 module.exports.OmniaBot = OmniaBot;
