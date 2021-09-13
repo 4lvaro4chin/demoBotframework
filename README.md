@@ -1818,3 +1818,169 @@ async registrarUsuario() {
         return json;
     }
 ```
+
+## Paso 15: Proactive message
+
+Instalar el módulo **@sap/hana-client**.
+
+```
+npm install @sap/hana-client
+```
+
+Crear la carpeta **hana** dentro de la carpeta **src**, luego crear el archivo **hanaConnection.js**.
+
+```
+const { TurnContext } = require('botbuilder');
+const hana = require('@sap/hana-client');
+
+class HanaConnection {
+    constructor() {
+
+    }
+
+    async saveRefenceInHana(context){
+        const reference = JSON.stringify(TurnContext.getConversationReference(context.activity));
+        
+        let connOptions = {
+            serverNode: process.env.hanaServerNode,
+            encrypt: "true",
+            sslValidateCertificate: "false",
+            uid: process.env.hanaUid,
+            pwd: process.env.hanaPwd,
+        };
+    
+        let dbConnection = hana.createConnection();
+
+        let userEmail = "aachin@omniasolution.com";
+    
+        try {
+            await dbConnection.connect(connOptions);
+            
+            let sql = `UPSERT CHATBOT.REFERENCE VALUES ('demoBotframework','${ userEmail }','${ reference }') 
+                       where CHATBOTNAME = 'demoBotframework' 
+                       AND USEREMAIL = '${ userEmail }';`;
+    
+            let result = await dbConnection.exec(sql);
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
+    async getRefenceInHana(chatbotName, userEmail) {
+        let connOptions = {
+            serverNode: process.env.hanaServerNode,
+            encrypt: "true",
+            sslValidateCertificate: "false",
+            uid: process.env.hanaUid,
+            pwd: process.env.hanaPwd,
+        };
+    
+        try {
+            let dbConnection = hana.createConnection();
+
+            await dbConnection.connect(connOptions);
+            
+            var sql = `SELECT * from CHATBOT.REFERENCE WHERE CHATBOTNAME = '${chatbotName}' AND USEREMAIL = '${userEmail}';`;
+    
+            var result = await dbConnection.exec(sql);
+    
+            return JSON.parse(result[0].REFERENCE);
+        } catch (err) {
+            console.log(err)
+        }
+    }
+}
+
+module.exports.HanaConnection = HanaConnection;
+```
+
+Modificar el archivo **bot.js**. Agregar la referencia para utilizar la clase **HanaConnection**.
+
+```
+const { HanaConnection } = require('../hana/hanaConnection')
+```
+
+Crear la constante **CONVERSATION_REFERENCE**.
+
+```
+const CONVERSATION_REFERENCE = 'CONVERSATION_REFERENCE';
+```
+
+Inicializar la variable **this.conversationReference**.
+
+```
+this.conversationReference = this.conversationState.createProperty(CONVERSATION_REFERENCE);
+```
+
+Crear el método **storeConversationReference**.
+
+```
+  async storeConversationReference(context) {
+      // pull the reference
+      const reference = TurnContext.getConversationReference(context.activity);
+      // store reference in memory using conversation data property
+      await this.conversationReference.set(context, reference);
+  }
+```
+
+Modificar el método **this.onMembersAdded** para guardar la referencia de la conversación.
+
+```
+// store the conversation reference for the newly added user
+await this.storeConversationReference(context);
+let hanaConnection = new HanaConnection();
+await hanaConnection.saveRefenceInHana(context);     
+```
+
+Modificar el archivo **index.js**. Agregar la referencia para utilizar la clase **HanaConnection**.
+
+```
+const { HanaConnection } = require('../hana/hanaConnection')
+```
+
+Agregar la sentencia después de la creación del servirdor.
+
+```
+server.use(restify.plugins.bodyParser());
+```
+
+Crear el servicio API **/api/proactiveMessage**.
+
+```
+server.post('/api/proactiveMessage', async (req, res) => {
+    try {
+        let hanaConnection = new HanaConnection();
+        let reference = await hanaConnection.getRefenceInHana(req.body.chatbotName, req.body.userEmail);
+        //let reference = await hanaConnection.getRefenceInHana('demoBotframework', 'aachin@omniasolution.com');
+        
+        await adapter.continueConversation(reference, async (turnContext) => {
+            await turnContext.sendActivity(req.body.message);
+        });
+
+        res.send(response(200, {success: 'Notify!!!', reference: reference}));
+    } catch (err) {
+        console.log(err)
+    
+        res.send(response(200, {error: err}));
+    }
+});
+```
+
+Crear el método **response**.
+
+```
+function response(statusCode, message) {
+    return {
+      statusCode: statusCode,
+      body: message
+    };
+}
+```
+
+Modificar el archivo **.env**. Crear las variables de entorno.
+
+```
+hanaServerNode = ''
+hanaUid = 'DBADMIN'
+hanaPwd = ''
+```
