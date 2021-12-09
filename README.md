@@ -268,6 +268,7 @@ this.onMembersAdded(async (context, next) => {
 ```
 
 Para diseñar una tarjeta adaptativa visitar la web https://adaptivecards.io/designer/.
+Tips and tricks to create stunning Adaptive Cards https://www.adenin.com/blog/adaptive-cards-tips-and-tricks/
 
 ## Paso 6:
 
